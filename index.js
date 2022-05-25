@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -55,6 +56,21 @@ async function run() {
             }
 
         }
+
+        // payment getwaye
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+            const service = req.body;
+            const price = service.price;
+            const amount = price * 100;
+
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: "usd",
+                payment_method_types: ['card']
+            });
+            res.send({ clientSecret: paymentIntent.client_secret })
+
+        });
 
         // api data load
         app.get('/tools', async (req, res) => {
@@ -123,6 +139,13 @@ async function run() {
             // 01854256704doly
         });
 
+        app.get('/booking/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const booking = await userPurchase.findOne(query);
+            res.send(booking);
+        })
+
 
         // user update and token get
         app.put('/user/:email', async (req, res) => {
@@ -162,7 +185,28 @@ async function run() {
             const isAdmin = user.role === 'admin';
             res.send({ admin: isAdmin });
 
-        })
+        });
+
+
+        app.get('/product', verifyJWT, async (req, res) => {
+            const product = await fixitsCollection.find().toArray();
+            res.send(product);
+
+        });
+        // add  a product 
+        app.post('/product', verifyJWT, verifyAdmin, async (req, res) => {
+            const doctor = req.body;
+            const result = await fixitsCollection.insertOne(doctor);
+            res.send(result);
+        });
+
+        app.delete('/product/:id', verifyJWT, verifyAdmin, async (req, res) => {
+
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await fixitsCollection.deleteOne(query);
+            res.send(result);
+        });
 
     } finally {
 
