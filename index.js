@@ -44,6 +44,7 @@ async function run() {
         const fixitsCollection = client.db("fixits-repaire").collection("services");
         const userCollection = client.db("fixits-repaire").collection("users");
         const userPurchase = client.db("fixits-repaire").collection("purchase");
+        const reviewCollection = client.db("fixits-repaire").collection("review");
 
 
         const verifyAdmin = async (req, res, next) => {
@@ -87,6 +88,21 @@ async function run() {
             res.send(result);
         });
 
+        // review
+        app.post('/review', async (req, res) => {
+            const review = req.body;
+            const result = await reviewCollection.insertOne(review);
+            res.send(result);
+        });
+
+        // load review api 
+        app.get('/review', verifyJWT, async (req, res) => {
+            const query = {};
+            const cursor = reviewCollection.find(query);
+            const allReview = await cursor.toArray();
+            res.send(allReview);
+        });
+
         // purchase with Update Service quantity
 
         app.put('/tools/:id', async (req, res) => {
@@ -123,11 +139,20 @@ async function run() {
             }
         });
 
+        // Order updatae
+        app.put('/purchase/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const updateDoc = {
+                $set: { paid: 'success' },
+            };
+            const result = await userPurchase.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+
         app.get('/booking', verifyJWT, async (req, res) => {
             const users = req.query.patient;
             const decodedEmail = req.decoded.email;
-            console.log(users);
-            console.log('decode : ', decodedEmail);
             // res.send(users);
             if (users === decodedEmail) {
                 const query = { bookingMan: users };
