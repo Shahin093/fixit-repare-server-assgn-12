@@ -150,6 +150,15 @@ async function run() {
             res.send(result);
         });
 
+        // order delete
+        app.delete('/order/:id', verifyJWT, async (req, res) => {
+
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await userPurchase.deleteOne(query);
+            res.send(result);
+        });
+
         app.get('/booking', verifyJWT, async (req, res) => {
             const users = req.query.patient;
             const decodedEmail = req.decoded.email;
